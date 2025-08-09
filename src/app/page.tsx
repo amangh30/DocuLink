@@ -25,13 +25,14 @@ export default function Home() {
             Home
           </a>
         </div>
-        
+
         <div>
           <img
-            src="/logo.svg"
+            src={theme === 'light' ? './moon.svg' : './sun.svg'}
             alt="Logo"
             onClick={toggleTheme}
-            className="h-8 w-auto cursor-pointer"
+            className={`h-10 w-10 flex items-center justify-center cursor-pointer p-2 rounded-full ${theme === 'light' ? 'hover:bg-gray-300' : 'hover:bg-gray-600'} 
+             bg-transparent transition-colors duration-200`}
           />
         </div>
       </nav>
