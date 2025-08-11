@@ -1,6 +1,7 @@
 'use client'
 
 import { useTheme } from 'next-themes'
+import Hero from './components/Hero'
 import { useEffect, useState } from 'react'
 
 export default function Home() {
@@ -18,11 +19,11 @@ export default function Home() {
   }
 
   return (
-    <>
-      <nav className="w-full px-6 py-4 flex justify-between items-center">
+    <div className='h-screen w-screen'>
+      <nav className={`h-[7%] ${theme === "dark" ? "bg-[#16142c]" : "bg-white"} w-full px-6 py-4 flex justify-between items-center`}>
         <div>
           <a href="/" className="text-lg font-semibold hover:text-blue-600 transition">
-            Home
+            DocuLink
           </a>
         </div>
 
@@ -37,9 +38,9 @@ export default function Home() {
         </div>
       </nav>
 
-      <div>
-        {/* Your main content here */}
+      <div className='h-[93%] bg-amber-500'>
+          <Hero />
       </div>
-    </>
+    </div>
   )
 }
