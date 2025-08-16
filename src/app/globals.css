@@ -22,3 +22,17 @@ body {
   --background: black;
   --foreground: white;
 }
+
+.quill-dark .ql-editor {
+  background-color: #1e1e2f;
+  color: #e5e5e5;
+}
+
+.quill-dark .ql-toolbar {
+  background-color: #2a2a3b;
+  border-color: #444;
+}
+
+.quill-dark .ql-container {
+  border-color: #444;
+}
