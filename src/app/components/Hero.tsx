@@ -26,7 +26,8 @@ export const Hero: React.FC = () => {
     },
   });
 
-  const suppressRef = useRef(false); // prevent loops
+  // Unique client ID for this tab
+  const clientIdRef = useRef<string>(Math.random().toString(36).substring(2, 10));
 
   // Generate code for sending
   useEffect(() => {
@@ -44,12 +45,14 @@ export const Hero: React.FC = () => {
 
     const channel = pusher.subscribe(`doc-channel-${roomCode}`);
 
-    channel.bind('doc-update', (data: { docHtml: string }) => {
-      console.log('📥 Received update');
-      if (quill) {
-        suppressRef.current = true; // prevent sending back same update
-        quill.root.innerHTML = data.docHtml;
-      }
+    channel.bind('doc-update', (data: { delta: any; clientId: string }) => {
+      if (!quill) return;
+
+      // 🚫 Ignore my own updates
+      if (data.clientId === clientIdRef.current) return;
+
+      console.log('📥 Received update from other client');
+      quill.updateContents(data.delta, 'api');
     });
 
     return () => {
@@ -59,34 +62,30 @@ export const Hero: React.FC = () => {
     };
   }, [isConnected, roomCode, quill]);
 
+  // Sync theme with Quill
   useEffect(() => {
-  if (!quill || !quillRef || !quillRef.current) return;
+    if (!quill || !quillRef || !quillRef.current) return;
 
-  if (theme === 'dark') {
-    quillRef.current.classList.add('quill-dark');
-  } else {
-    quillRef.current.classList.remove('quill-dark');
-  }
-}, [theme, quill, quillRef]);
-
+    if (theme === 'dark') {
+      quillRef.current.classList.add('quill-dark');
+    } else {
+      quillRef.current.classList.remove('quill-dark');
+    }
+  }, [theme, quill, quillRef]);
 
   // Send updates when editing
   useEffect(() => {
     if (!quill || !isConnected) return;
 
-    quill.on('text-change', () => {
-      if (suppressRef.current) {
-        suppressRef.current = false;
-        return;
-      }
+    quill.on('text-change', (delta, oldDelta, source) => {
+      if (source !== 'user') return; // ✅ Only broadcast real user input
 
-      const content = quill.root.innerHTML;
-      console.log('📤 Sending update:', content);
+      console.log('📤 Sending update:', delta);
 
       fetch('/api/pusher/trigger', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ roomCode, docHtml: content }),
+        body: JSON.stringify({ roomCode, delta, clientId: clientIdRef.current }),
       });
     });
   }, [quill, isConnected, roomCode]);

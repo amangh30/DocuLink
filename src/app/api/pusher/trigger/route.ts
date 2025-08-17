@@ -11,17 +11,20 @@ const pusher = new Pusher({
 
 export async function POST(req: Request) {
   try {
-    const { roomCode, docHtml } = await req.json();
+    const { roomCode, delta, clientId } = await req.json();
 
-    if (!roomCode || !docHtml) {
+    if (!roomCode || !delta || !clientId) {
       return NextResponse.json(
-        { success: false, error: 'Missing roomCode or docHtml' },
+        { success: false, error: 'Missing roomCode, delta, or clientId' },
         { status: 400 }
       );
     }
 
     // Broadcast to everyone subscribed to this channel
-    await pusher.trigger(`doc-channel-${roomCode}`, 'doc-update', { docHtml });
+    await pusher.trigger(`doc-channel-${roomCode}`, 'doc-update', {
+      delta,
+      clientId,
+    });
 
     return NextResponse.json({ success: true });
   } catch (err: any) {
