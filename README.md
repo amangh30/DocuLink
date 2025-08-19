@@ -4,7 +4,7 @@
 
 ```bash
 git clone https://github.com/amangh30/DocuLink
-cd doculink
+cd DocuLink
 ````
 
 ### 2. Install dependencies
