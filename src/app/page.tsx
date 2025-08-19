@@ -3,6 +3,7 @@
 import { useTheme } from 'next-themes'
 import Hero from './components/Hero'
 import { useEffect, useState } from 'react'
+import Link from 'next/link' // ✅ Import Link
 
 export default function Home() {
   const { theme, setTheme } = useTheme()
@@ -20,11 +21,19 @@ export default function Home() {
 
   return (
     <div className='h-screen w-screen'>
-      <nav className={`h-[7%] ${theme === "dark" ? "bg-[#16142c]" : "bg-white"} w-full px-6 py-4 flex justify-between items-center`}>
+      <nav
+        className={`h-[7%] ${
+          theme === 'dark' ? 'bg-[#16142c]' : 'bg-white'
+        } w-full px-6 py-4 flex justify-between items-center`}
+      >
         <div>
-          <a href="/" className="text-lg font-semibold hover:text-blue-600 transition">
+          {/* ✅ Use Link instead of <a> */}
+          <Link
+            href="/"
+            className="text-lg font-semibold hover:text-blue-600 transition"
+          >
             DocuLink
-          </a>
+          </Link>
         </div>
 
         <div>
@@ -32,14 +41,16 @@ export default function Home() {
             src={theme === 'light' ? './moon.svg' : './sun.svg'}
             alt="Logo"
             onClick={toggleTheme}
-            className={`h-10 w-10 flex items-center justify-center cursor-pointer p-2 rounded-full ${theme === 'light' ? 'hover:bg-gray-300' : 'hover:bg-gray-600'} 
+            className={`h-10 w-10 flex items-center justify-center cursor-pointer p-2 rounded-full ${
+              theme === 'light' ? 'hover:bg-gray-300' : 'hover:bg-gray-600'
+            } 
              bg-transparent transition-colors duration-200`}
           />
         </div>
       </nav>
 
       <div className='h-[93%] bg-amber-500'>
-          <Hero />
+        <Hero />
       </div>
     </div>
   )
