@@ -1,23 +1,28 @@
-'use client'
+'use client';
 
-import { useTheme } from 'next-themes'
-import Hero from './components/Hero'
-import { useEffect, useState } from 'react'
-import Link from 'next/link' // ✅ Import Link
+import { useTheme } from 'next-themes';
+import dynamic from 'next/dynamic';
+import Link from 'next/link';
+import { useEffect, useState } from 'react';
+import Image from 'next/image';
+
+
+// ✅ Dynamically import Hero only on client
+const Hero = dynamic(() => import('./components/Hero'), { ssr: false });
 
 export default function Home() {
-  const { theme, setTheme } = useTheme()
-  const [mounted, setMounted] = useState(false)
+  const { theme, setTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    setMounted(true)
-  }, [])
+    setMounted(true);
+  }, []);
 
-  if (!mounted) return null // Prevents hydration mismatch
+  if (!mounted) return null; // Prevent hydration mismatch
 
   const toggleTheme = () => {
-    setTheme(theme === 'light' ? 'dark' : 'light')
-  }
+    setTheme(theme === 'light' ? 'dark' : 'light');
+  };
 
   return (
     <div className='h-screen w-screen'>
@@ -27,25 +32,25 @@ export default function Home() {
         } w-full px-6 py-4 flex justify-between items-center`}
       >
         <div>
-          {/* ✅ Use Link instead of <a> */}
-          <Link
-            href="/"
-            className="text-lg font-semibold hover:text-blue-600 transition"
-          >
+          <Link href='/' className='text-lg font-semibold hover:text-blue-600 transition'>
             DocuLink
           </Link>
         </div>
 
         <div>
-          <img
-            src={theme === 'light' ? './moon.svg' : './sun.svg'}
-            alt="Logo"
+          import Image from 'next/image';
+
+          <Image
+            src={theme === 'light' ? '/moon.svg' : '/sun.svg'}
+            alt="Theme toggle"
+            width={40}
+            height={40}
             onClick={toggleTheme}
             className={`h-10 w-10 flex items-center justify-center cursor-pointer p-2 rounded-full ${
               theme === 'light' ? 'hover:bg-gray-300' : 'hover:bg-gray-600'
-            } 
-             bg-transparent transition-colors duration-200`}
+            } bg-transparent transition-colors duration-200`}
           />
+
         </div>
       </nav>
 
@@ -53,5 +58,5 @@ export default function Home() {
         <Hero />
       </div>
     </div>
-  )
+  );
 }

@@ -4,8 +4,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useTheme } from 'next-themes';
 import Pusher from 'pusher-js';
 import { useQuill } from 'react-quilljs';
+import type Delta from 'quill-delta'; // Delta typing
 import 'quill/dist/quill.snow.css';
-import type { DeltaStatic } from 'quill'; // ✅ Proper typing
 
 const generateCode = () => {
   return Math.random().toString(36).substring(2, 10).toUpperCase();
@@ -37,8 +37,7 @@ export const Hero: React.FC = () => {
 
   // Setup Pusher subscription
   useEffect(() => {
-    if (!isConnected || !roomCode) return;
-    if (!quill) return;
+    if (!isConnected || !roomCode || !quill) return;
 
     const pusher = new Pusher(process.env.NEXT_PUBLIC_PUSHER_KEY!, {
       cluster: process.env.NEXT_PUBLIC_PUSHER_CLUSTER!,
@@ -46,14 +45,18 @@ export const Hero: React.FC = () => {
 
     const channel = pusher.subscribe(`doc-channel-${roomCode}`);
 
-    channel.bind('doc-update', (data: { delta: DeltaStatic; clientId: string }) => {
+    const handleDocUpdate = (data: { delta: Delta; clientId: string }) => {
       if (!quill) return;
-      if (data.clientId === clientIdRef.current) return; // 🚫 Ignore my own updates
-      quill.updateContents(data.delta, 'api');
-    });
+      if (data.clientId === clientIdRef.current) return; // Ignore own updates
+
+      console.log('📥 Received update from other client');
+      quill.updateContents(data.delta, 'api'); // ✅ typed correctly now
+    };
+
+    channel.bind('doc-update', handleDocUpdate);
 
     return () => {
-      channel.unbind_all();
+      channel.unbind('doc-update', handleDocUpdate);
       pusher.unsubscribe(`doc-channel-${roomCode}`);
       pusher.disconnect();
     };
@@ -61,27 +64,35 @@ export const Hero: React.FC = () => {
 
   // Sync theme with Quill
   useEffect(() => {
-    if (!quill || !quillRef || !quillRef.current) return;
+    if (!quillRef?.current) return;
     if (theme === 'dark') {
       quillRef.current.classList.add('quill-dark');
     } else {
       quillRef.current.classList.remove('quill-dark');
     }
-  }, [theme, quill, quillRef]);
+  }, [theme, quillRef]);
 
   // Send updates when editing
   useEffect(() => {
     if (!quill || !isConnected) return;
 
-    quill.on('text-change', (delta: DeltaStatic, _oldDelta: DeltaStatic, source: string) => {
-      if (source !== 'user') return; // ✅ Only broadcast real user input
+    const handleTextChange = (delta: Delta, _oldDelta: Delta, source: string) => {
+      if (source !== 'user') return;
+
+      console.log('📤 Sending update:', delta);
 
       fetch('/api/pusher/trigger', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ roomCode, delta, clientId: clientIdRef.current }),
       });
-    });
+    };
+
+    quill.on('text-change', handleTextChange);
+
+    return () => {
+      quill.off('text-change', handleTextChange);
+    };
   }, [quill, isConnected, roomCode]);
 
   // Copy sharing code
