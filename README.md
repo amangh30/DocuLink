@@ -3,7 +3,7 @@
 ### 1. Clone the repository
 
 ```bash
-git clone https://github.com/amangh-30/doculink
+git clone https://github.com/amangh-30/DocuLink
 cd doculink
 ````
 
