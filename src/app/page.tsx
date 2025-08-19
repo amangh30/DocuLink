@@ -38,8 +38,6 @@ export default function Home() {
         </div>
 
         <div>
-          import Image from 'next/image';
-
           <Image
             src={theme === 'light' ? '/moon.svg' : '/sun.svg'}
             alt="Theme toggle"
