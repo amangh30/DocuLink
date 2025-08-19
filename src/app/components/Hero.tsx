@@ -5,6 +5,7 @@ import { useTheme } from 'next-themes';
 import Pusher from 'pusher-js';
 import { useQuill } from 'react-quilljs';
 import 'quill/dist/quill.snow.css';
+import type { DeltaStatic } from 'quill'; // ✅ Proper typing
 
 const generateCode = () => {
   return Math.random().toString(36).substring(2, 10).toUpperCase();
@@ -45,13 +46,9 @@ export const Hero: React.FC = () => {
 
     const channel = pusher.subscribe(`doc-channel-${roomCode}`);
 
-    channel.bind('doc-update', (data: { delta: any; clientId: string }) => {
+    channel.bind('doc-update', (data: { delta: DeltaStatic; clientId: string }) => {
       if (!quill) return;
-
-      // 🚫 Ignore my own updates
-      if (data.clientId === clientIdRef.current) return;
-
-      console.log('📥 Received update from other client');
+      if (data.clientId === clientIdRef.current) return; // 🚫 Ignore my own updates
       quill.updateContents(data.delta, 'api');
     });
 
@@ -65,7 +62,6 @@ export const Hero: React.FC = () => {
   // Sync theme with Quill
   useEffect(() => {
     if (!quill || !quillRef || !quillRef.current) return;
-
     if (theme === 'dark') {
       quillRef.current.classList.add('quill-dark');
     } else {
@@ -77,10 +73,8 @@ export const Hero: React.FC = () => {
   useEffect(() => {
     if (!quill || !isConnected) return;
 
-    quill.on('text-change', (delta, oldDelta, source) => {
+    quill.on('text-change', (delta: DeltaStatic, _oldDelta: DeltaStatic, source: string) => {
       if (source !== 'user') return; // ✅ Only broadcast real user input
-
-      console.log('📤 Sending update:', delta);
 
       fetch('/api/pusher/trigger', {
         method: 'POST',
