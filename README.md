@@ -5,7 +5,7 @@
 ```bash
 git clone https://github.com/amangh30/DocuLink
 cd DocuLink
-````
+```
 
 ### 2. Install dependencies
 
@@ -19,7 +19,20 @@ or, if you're using Yarn:
 yarn
 ```
 
-### 3. Run the development server
+### 3. Set up environment variables
+
+Create a `.env.local` file in the root of the project and add the following:
+
+```env
+NEXT_PUBLIC_PUSHER_KEY=
+NEXT_PUBLIC_PUSHER_CLUSTER=
+PUSHER_APP_ID=
+PUSHER_SECRET=
+```
+
+> ⚠️ Make sure to replace the values with your actual Pusher credentials.
+
+### 4. Run the development server
 
 ```bash
 npm run dev
@@ -32,6 +45,8 @@ yarn dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) in your browser to see the app.
+
+---
 
 ## Build for production
 
