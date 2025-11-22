@@ -19,6 +19,9 @@ export const Hero: React.FC = () => {
   const [sendCode, setSendCode] = useState('');
   const [receiveCode, setReceiveCode] = useState('');
   const [copyStatus, setCopyStatus] = useState('Copy');
+  const [connectionStatus, setConnectionStatus] = useState<'Disconnected' | 'Connecting' | 'Connected'>('Disconnected');
+  const [isSharing, setIsSharing] = useState(false);
+  const [isConnecting, setIsConnecting] = useState(false);
 
   const { quill, quillRef } = useQuill({
     theme: 'snow',
@@ -29,6 +32,7 @@ export const Hero: React.FC = () => {
 
   // Unique client ID for this tab
   const clientIdRef = useRef<string>(Math.random().toString(36).substring(2, 10));
+  const pusherRef = useRef<Pusher | null>(null);
 
   // Generate code for sending
   useEffect(() => {
@@ -39,11 +43,40 @@ export const Hero: React.FC = () => {
   useEffect(() => {
     if (!isConnected || !roomCode || !quill) return;
 
-    const pusher = new Pusher(process.env.NEXT_PUBLIC_PUSHER_KEY!, {
-      cluster: process.env.NEXT_PUBLIC_PUSHER_CLUSTER!,
+    const pusherKey = process.env.NEXT_PUBLIC_PUSHER_KEY;
+    const pusherCluster = process.env.NEXT_PUBLIC_PUSHER_CLUSTER;
+
+    if (!pusherKey || !pusherCluster) {
+      console.error('Missing Pusher environment variables');
+      alert('Configuration error: Missing Pusher credentials.');
+      setIsSharing(false);
+      setIsConnecting(false);
+      return;
+    }
+
+    setConnectionStatus('Connecting');
+
+    if (!pusherRef.current) {
+      pusherRef.current = new Pusher(pusherKey, {
+        cluster: pusherCluster,
+      });
+    }
+
+    const pusher = pusherRef.current;
+    const channel = pusher.subscribe(`doc-channel-${roomCode}`);
+
+    channel.bind('pusher:subscription_succeeded', () => {
+      setConnectionStatus('Connected');
+      setIsSharing(false);
+      setIsConnecting(false);
     });
 
-    const channel = pusher.subscribe(`doc-channel-${roomCode}`);
+    channel.bind('pusher:subscription_error', () => {
+      setConnectionStatus('Disconnected');
+      alert('Failed to subscribe to channel. Please check your connection.');
+      setIsSharing(false);
+      setIsConnecting(false);
+    });
 
     const handleDocUpdate = (data: { delta: Delta; clientId: string }) => {
       if (!quill) return;
@@ -58,7 +91,8 @@ export const Hero: React.FC = () => {
     return () => {
       channel.unbind('doc-update', handleDocUpdate);
       pusher.unsubscribe(`doc-channel-${roomCode}`);
-      pusher.disconnect();
+      // We don't disconnect pusher here to allow reuse, or we could if we want strict cleanup
+      // pusher.disconnect(); 
     };
   }, [isConnected, roomCode, quill]);
 
@@ -76,16 +110,24 @@ export const Hero: React.FC = () => {
   useEffect(() => {
     if (!quill || !isConnected) return;
 
-    const handleTextChange = (delta: Delta, _oldDelta: Delta, source: string) => {
+    const handleTextChange = async (delta: Delta, _oldDelta: Delta, source: string) => {
       if (source !== 'user') return;
 
       console.log('📤 Sending update:', delta);
 
-      fetch('/api/pusher/trigger', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ roomCode, delta, clientId: clientIdRef.current }),
-      });
+      try {
+        const response = await fetch('/api/pusher/trigger', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ roomCode, delta, clientId: clientIdRef.current }),
+        });
+
+        if (!response.ok) {
+          console.error('Failed to send update:', response.statusText);
+        }
+      } catch (error) {
+        console.error('Error sending update:', error);
+      }
     };
 
     quill.on('text-change', handleTextChange);
@@ -96,20 +138,27 @@ export const Hero: React.FC = () => {
   }, [quill, isConnected, roomCode]);
 
   // Copy sharing code
-  const handleCopy = () => {
-    navigator.clipboard.writeText(sendCode).then(() => {
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(sendCode);
       setCopyStatus('Copied!');
       setTimeout(() => setCopyStatus('Copy'), 2000);
-    });
+    } catch (err) {
+      console.error('Failed to copy:', err);
+      setCopyStatus('Error');
+      setTimeout(() => setCopyStatus('Copy'), 2000);
+    }
   };
 
   const handleStartSharing = () => {
+    setIsSharing(true);
     setRoomCode(sendCode);
     setIsConnected(true);
   };
 
   const handleConnect = () => {
     if (receiveCode.trim()) {
+      setIsConnecting(true);
       setRoomCode(receiveCode);
       setIsConnected(true);
     } else {
@@ -120,14 +169,14 @@ export const Hero: React.FC = () => {
   const backgroundStyle =
     theme === 'dark'
       ? {
-          backgroundImage: `
+        backgroundImage: `
             radial-gradient(circle at 15% 25%, rgba(88, 81, 219, 0.3) 0%, rgba(88, 81, 219, 0) 25%),
             radial-gradient(circle at 85% 75%, rgba(217, 70, 239, 0.2) 0%, rgba(217, 70, 239, 0) 30%)
           `,
-        }
+      }
       : {
-          backgroundImage: `linear-gradient(to top, #e2e8f0, #f8fafc)`,
-        };
+        backgroundImage: `linear-gradient(to top, #e2e8f0, #f8fafc)`,
+      };
 
   return (
     <div
@@ -135,10 +184,18 @@ export const Hero: React.FC = () => {
       style={backgroundStyle}
     >
       {isConnected ? (
-        <div className="w-full max-w-4xl h-[80vh] flex flex-col">
-          <h3 className="text-center text-foreground mb-4 text-lg">
-            Connected to room: {roomCode}
-          </h3>
+        <div className="w-full max-w-4xl h-[calc(100dvh-100px)] flex flex-col">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-foreground text-lg">
+              Connected to room: <span className="font-mono font-bold">{roomCode}</span>
+            </h3>
+            <span className={`text-sm font-semibold ${connectionStatus === 'Connected' ? 'text-green-500' :
+              connectionStatus === 'Connecting' ? 'text-yellow-500' : 'text-red-500'
+              }`}>
+              {connectionStatus}
+            </span>
+          </div>
+
           <div className="flex-grow bg-white rounded-lg shadow-lg overflow-hidden">
             <div ref={quillRef} style={{ height: '100%' }} />
           </div>
@@ -165,9 +222,10 @@ export const Hero: React.FC = () => {
               </div>
               <button
                 onClick={handleStartSharing}
-                className="mt-4 w-full rounded-lg bg-indigo-500 py-2.5 font-semibold text-white transition-transform hover:scale-105"
+                disabled={isSharing}
+                className={`mt-4 w-full rounded-lg bg-indigo-500 py-2.5 font-semibold text-white transition-transform ${isSharing ? 'opacity-70 cursor-not-allowed' : 'hover:scale-105'}`}
               >
-                Start Sharing
+                {isSharing ? 'Starting...' : 'Start Sharing'}
               </button>
             </div>
 
@@ -189,9 +247,10 @@ export const Hero: React.FC = () => {
               </div>
               <button
                 onClick={handleConnect}
-                className="mt-4 w-full rounded-lg bg-gray-700 py-2.5 font-semibold text-white transition-transform hover:scale-105"
+                disabled={isConnecting}
+                className={`mt-4 w-full rounded-lg bg-gray-700 py-2.5 font-semibold text-white transition-transform ${isConnecting ? 'opacity-70 cursor-not-allowed' : 'hover:scale-105'}`}
               >
-                Connect
+                {isConnecting ? 'Connecting...' : 'Connect'}
               </button>
             </div>
           </div>

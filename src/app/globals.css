@@ -12,6 +12,8 @@
   --font-mono: var(--font-geist-mono);
 }
 
+@custom-variant dark (&:where([data-theme=dark], [data-theme=dark] *));
+
 body {
   background: var(--background);
   color: var(--foreground);
@@ -35,4 +37,21 @@ body {
 
 .quill-dark .ql-container {
   border-color: #444;
+}
+
+.quill-dark .ql-stroke {
+  stroke: #e5e5e5 !important;
+}
+
+.quill-dark .ql-fill {
+  fill: #e5e5e5 !important;
+}
+
+.quill-dark .ql-picker {
+  color: #e5e5e5 !important;
+}
+
+.quill-dark .ql-picker-options {
+  background-color: #2a2a3b !important;
+  border-color: #444 !important;
 }

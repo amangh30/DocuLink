@@ -8,7 +8,10 @@ import Image from 'next/image';
 
 
 // ✅ Dynamically import Hero only on client
-const Hero = dynamic(() => import('./components/Hero'), { ssr: false });
+const Hero = dynamic(() => import('./components/Hero'), {
+  ssr: false,
+  loading: () => <div className="h-full w-full flex items-center justify-center text-gray-500">Loading editor...</div>
+});
 
 export default function Home() {
   const { theme, setTheme } = useTheme();
@@ -18,8 +21,6 @@ export default function Home() {
     setMounted(true);
   }, []);
 
-  if (!mounted) return null; // Prevent hydration mismatch
-
   const toggleTheme = () => {
     setTheme(theme === 'light' ? 'dark' : 'light');
   };
@@ -27,9 +28,8 @@ export default function Home() {
   return (
     <div className='h-screen w-screen'>
       <nav
-        className={`h-[7%] ${
-          theme === 'dark' ? 'bg-[#16142c]' : 'bg-white'
-        } w-full px-6 py-4 flex justify-between items-center`}
+        className={`h-[7%] ${mounted && theme === 'dark' ? 'bg-[#16142c]' : 'bg-white'
+          } w-full px-6 py-4 flex justify-between items-center transition-colors duration-300`}
       >
         <div>
           <Link href='/' className='text-lg font-semibold hover:text-blue-600 transition'>
@@ -38,17 +38,17 @@ export default function Home() {
         </div>
 
         <div>
-          <Image
-            src={theme === 'light' ? '/moon.svg' : '/sun.svg'}
-            alt="Theme toggle"
-            width={40}
-            height={40}
-            onClick={toggleTheme}
-            className={`h-10 w-10 flex items-center justify-center cursor-pointer p-2 rounded-full ${
-              theme === 'light' ? 'hover:bg-gray-300' : 'hover:bg-gray-600'
-            } bg-transparent transition-colors duration-200`}
-          />
-
+          {mounted && (
+            <Image
+              src={theme === 'light' ? '/moon.svg' : '/sun.svg'}
+              alt="Theme toggle"
+              width={40}
+              height={40}
+              onClick={toggleTheme}
+              className={`h-10 w-10 flex items-center justify-center cursor-pointer p-2 rounded-full ${theme === 'light' ? 'hover:bg-gray-300' : 'hover:bg-gray-600'
+                } bg-transparent transition-colors duration-200`}
+            />
+          )}
         </div>
       </nav>
 
