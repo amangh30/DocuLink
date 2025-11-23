@@ -104,7 +104,7 @@ export const Hero: React.FC = () => {
     } else {
       quillRef.current.classList.remove('quill-dark');
     }
-  }, [theme, quillRef]);
+  }, [theme, quillRef, quill]);
 
   // Send updates when editing
   useEffect(() => {

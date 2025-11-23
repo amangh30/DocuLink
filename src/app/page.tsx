@@ -7,10 +7,12 @@ import { useEffect, useState } from 'react';
 import Image from 'next/image';
 
 
+import Loading from './components/Loading';
+
 // ✅ Dynamically import Hero only on client
 const Hero = dynamic(() => import('./components/Hero'), {
   ssr: false,
-  loading: () => <div className="h-full w-full flex items-center justify-center text-gray-500">Loading editor...</div>
+  loading: () => <Loading />
 });
 
 export default function Home() {
@@ -52,7 +54,7 @@ export default function Home() {
         </div>
       </nav>
 
-      <div className='h-[93%] bg-amber-500'>
+      <div className='h-[93%]'>
         <Hero />
       </div>
     </div>
