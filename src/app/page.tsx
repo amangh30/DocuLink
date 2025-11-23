@@ -30,8 +30,7 @@ export default function Home() {
   return (
     <div className='h-screen w-screen'>
       <nav
-        className={`h-[7%] ${mounted && theme === 'dark' ? 'bg-[#16142c]' : 'bg-white'
-          } w-full px-6 py-4 flex justify-between items-center transition-colors duration-300`}
+        className="h-[7%] bg-white dark:bg-[#16142c] w-full px-6 py-4 flex justify-between items-center transition-colors duration-300"
       >
         <div>
           <Link href='/' className='text-lg font-semibold hover:text-blue-600 transition'>
