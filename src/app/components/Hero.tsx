@@ -39,6 +39,8 @@ export const Hero: React.FC = () => {
     setSendCode(generateCode());
   }, []);
 
+  const [isHost, setIsHost] = useState(false);
+
   // Setup Pusher subscription
   useEffect(() => {
     if (!isConnected || !roomCode || !quill) return;
@@ -65,10 +67,24 @@ export const Hero: React.FC = () => {
     const pusher = pusherRef.current;
     const channel = pusher.subscribe(`doc-channel-${roomCode}`);
 
-    channel.bind('pusher:subscription_succeeded', () => {
+    channel.bind('pusher:subscription_succeeded', async () => {
       setConnectionStatus('Connected');
       setIsSharing(false);
       setIsConnecting(false);
+
+      // If we are NOT the host, we need to ask for the current state
+      if (!isHost) {
+        console.log('👋 New client joined, asking for sync...');
+        await fetch('/api/pusher/trigger', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            roomCode,
+            event: 'client-ready',
+            clientId: clientIdRef.current,
+          }),
+        });
+      }
     });
 
     channel.bind('pusher:subscription_error', () => {
@@ -83,18 +99,45 @@ export const Hero: React.FC = () => {
       if (data.clientId === clientIdRef.current) return; // Ignore own updates
 
       console.log('📥 Received update from other client');
-      quill.updateContents(data.delta, 'api'); // ✅ typed correctly now
+      quill.updateContents(data.delta, 'api');
+    };
+
+    const handleClientReady = async (data: { clientId: string }) => {
+      if (!isHost || data.clientId === clientIdRef.current) return;
+
+      console.log('🆕 New client ready, sending sync data...');
+      const currentContents = quill.getContents();
+
+      await fetch('/api/pusher/trigger', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          roomCode,
+          event: 'sync-response',
+          delta: currentContents, // Sending full content as delta
+          clientId: clientIdRef.current,
+        }),
+      });
+    };
+
+    const handleSyncResponse = (data: { delta: Delta; clientId: string }) => {
+      if (isHost || data.clientId === clientIdRef.current) return;
+
+      console.log('🔄 Received sync data, updating editor...');
+      quill.setContents(data.delta, 'api');
     };
 
     channel.bind('doc-update', handleDocUpdate);
+    channel.bind('client-ready', handleClientReady);
+    channel.bind('sync-response', handleSyncResponse);
 
     return () => {
       channel.unbind('doc-update', handleDocUpdate);
+      channel.unbind('client-ready', handleClientReady);
+      channel.unbind('sync-response', handleSyncResponse);
       pusher.unsubscribe(`doc-channel-${roomCode}`);
-      // We don't disconnect pusher here to allow reuse, or we could if we want strict cleanup
-      // pusher.disconnect(); 
     };
-  }, [isConnected, roomCode, quill]);
+  }, [isConnected, roomCode, quill, isHost]);
 
   // Sync theme with Quill
   useEffect(() => {
@@ -119,7 +162,7 @@ export const Hero: React.FC = () => {
         const response = await fetch('/api/pusher/trigger', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ roomCode, delta, clientId: clientIdRef.current }),
+          body: JSON.stringify({ roomCode, delta, clientId: clientIdRef.current, event: 'doc-update' }),
         });
 
         if (!response.ok) {
@@ -153,6 +196,7 @@ export const Hero: React.FC = () => {
   const handleStartSharing = () => {
     setIsSharing(true);
     setRoomCode(sendCode);
+    setIsHost(true);
     setIsConnected(true);
   };
 

@@ -29,18 +29,11 @@ interface PusherPayload {
 
 export async function POST(req: Request) {
   try {
-    const { roomCode, delta, clientId }: PusherPayload = await req.json();
+    const { roomCode, delta, clientId, event }: PusherPayload & { event?: string } = await req.json();
 
     if (!roomCode || typeof roomCode !== 'string') {
       return NextResponse.json(
         { success: false, error: 'Invalid or missing roomCode' },
-        { status: 400 }
-      );
-    }
-
-    if (!delta) {
-      return NextResponse.json(
-        { success: false, error: 'Missing delta' },
         { status: 400 }
       );
     }
@@ -53,9 +46,27 @@ export async function POST(req: Request) {
     }
 
     const pusher = getPusherInstance();
+    const eventName = event || 'doc-update';
 
-    // ✅ Just relay raw delta JSON to Pusher
-    await pusher.trigger(`doc-channel-${roomCode}`, 'doc-update', {
+    // Validate allowed events
+    const allowedEvents = ['doc-update', 'client-ready', 'sync-response'];
+    if (!allowedEvents.includes(eventName)) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid event type' },
+        { status: 400 }
+      );
+    }
+
+    // For doc-update, delta is required
+    if (eventName === 'doc-update' && !delta) {
+      return NextResponse.json(
+        { success: false, error: 'Missing delta for doc-update' },
+        { status: 400 }
+      );
+    }
+
+    // ✅ Relay event to Pusher
+    await pusher.trigger(`doc-channel-${roomCode}`, eventName, {
       delta,
       clientId,
     });
