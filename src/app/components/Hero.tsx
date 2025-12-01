@@ -149,20 +149,27 @@ export const Hero: React.FC = () => {
     }
   }, [theme, quillRef, quill]);
 
+  // Buffer for accumulating deltas
+  const deltaBuffer = useRef<Delta | null>(null);
+  const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
   // Send updates when editing
   useEffect(() => {
     if (!quill || !isConnected) return;
 
-    const handleTextChange = async (delta: Delta, _oldDelta: Delta, source: string) => {
-      if (source !== 'user') return;
+    const sendBufferedUpdate = async () => {
+      if (!deltaBuffer.current) return;
 
-      console.log('📤 Sending update:', delta);
+      const deltaToSend = deltaBuffer.current;
+      deltaBuffer.current = null; // Clear buffer immediately to capture new changes
+
+      console.log('📤 Sending buffered update:', deltaToSend);
 
       try {
         const response = await fetch('/api/pusher/trigger', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ roomCode, delta, clientId: clientIdRef.current, event: 'doc-update' }),
+          body: JSON.stringify({ roomCode, delta: deltaToSend, clientId: clientIdRef.current, event: 'doc-update' }),
         });
 
         if (!response.ok) {
@@ -173,10 +180,32 @@ export const Hero: React.FC = () => {
       }
     };
 
+    const handleTextChange = (delta: Delta, _oldDelta: Delta, source: string) => {
+      if (source !== 'user') return;
+
+      // Initialize buffer if empty, otherwise compose
+      if (!deltaBuffer.current) {
+        deltaBuffer.current = delta;
+      } else {
+        deltaBuffer.current = deltaBuffer.current.compose(delta);
+      }
+
+      // Clear existing timeout
+      if (debounceTimeoutRef.current) {
+        clearTimeout(debounceTimeoutRef.current);
+      }
+
+      // Set new timeout (300ms debounce)
+      debounceTimeoutRef.current = setTimeout(sendBufferedUpdate, 300);
+    };
+
     quill.on('text-change', handleTextChange);
 
     return () => {
       quill.off('text-change', handleTextChange);
+      if (debounceTimeoutRef.current) {
+        clearTimeout(debounceTimeoutRef.current);
+      }
     };
   }, [quill, isConnected, roomCode]);
 
