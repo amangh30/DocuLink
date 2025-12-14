@@ -8,6 +8,7 @@ import Image from 'next/image';
 
 
 import Loading from './components/Loading';
+import { Footer } from './components/Footer';
 
 // ✅ Dynamically import Hero only on client
 const Hero = dynamic(() => import('./components/Hero'), {
@@ -56,6 +57,7 @@ export default function Home() {
       <div className='h-[93%]'>
         <Hero />
       </div>
+      <Footer/>
     </div>
   );
 }
