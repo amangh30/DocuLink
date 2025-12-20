@@ -1,6 +1,7 @@
 'use client'
 
 import Image from "next/image"
+import Link from "next/link"
 
 export const Footer: React.FC = ()=>{
     return(
@@ -10,6 +11,15 @@ export const Footer: React.FC = ()=>{
                     <a href="https://amansinha.vercel.app/" className="hover:underline" target="_blank">Aman Sinha</a>
                 </div>
                 <div>
+                    <Link href="https://github.com/amangh30" target="_blank" rel="noopener noreferrer">
+                    <Image
+                        src="/github-mark.png"
+                        alt="GitHub"
+                        width={40}
+                        height={40}
+                        style={{ cursor: "pointer" }}
+                    />
+                    </Link>                
                 </div>
             </div>
         </>
