@@ -13,13 +13,14 @@ export const Footer: React.FC = ()=>{
                 <div>
                     <Link href="https://github.com/amangh30" target="_blank" rel="noopener noreferrer">
                     <Image
+                        className="hover:bg-gray-300 hover:rounded-2xl"
                         src="/github-mark.png"
                         alt="GitHub"
                         width={40}
                         height={40}
                         style={{ cursor: "pointer" }}
                     />
-                    </Link>                
+                    </Link>     
                 </div>
             </div>
         </>
